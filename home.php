@@ -26,7 +26,16 @@
         header("Location: index.php");
         exit();
     }
-
+    // Edycja zadania
+    if (isset($_POST["edit_task_save"]) && isset($_POST["edit_task_id"]) && !empty($_POST["edit_task_name"])) {
+        $id = intval($_POST["edit_task_id"]);
+        if (isset($_SESSION["tasks"][$id])) {
+        $_SESSION["tasks"][$id]["name"] = htmlspecialchars($_POST["edit_task_name"]);
+    }
+}
+    if (isset($_POST["cancel_edit"])) {
+    unset($_POST["edit_task_show"]);
+}
     // Dodawanie zadania
     if(isset($_POST["add_task"]) && !empty($_POST["task_name"]) && !empty($_POST["task_date"])) {
         if (!isset($_SESSION["tasks"])) $_SESSION["tasks"] = [];
@@ -113,24 +122,45 @@
             if (isset($_SESSION["tasks"]) && count($_SESSION["tasks"]) > 0) {
                 foreach ($_SESSION["tasks"] as $id => $task) {
                     echo '<li class="task-item">';
-                    echo '<div>';
-                    echo '<span class="'.($task["done"] ? 'task-done' : '').'">'.htmlspecialchars($task["name"]).'</span>';
-                    echo '<span class="task-date">na: '.htmlspecialchars($task["date"]).'</span>';
-                    echo '</div>';
-                    echo '<div class="task-actions">';
-                    if (!$task["done"]) {
+                    echo '<li class="task-item">';
+                    echo '<div class="task-row">';
+                    if (isset($_POST["edit_task_show"]) && $_POST["edit_task_show"] == $id) {
                         echo '<form action="home.php" method="post" style="display:inline;">';
-                        echo '<button type="submit" name="done_task" value="'.$id.'">Oznacz jako wykonane</button>';
+                        echo '<button type="submit" name="cancel_edit" style="margin-right:8px;">Anuluj</button>';
+                        echo '<input type="hidden" name="edit_task_id" value="'.$id.'">';
+                        echo '<input type="text" name="edit_task_name" value="'.htmlspecialchars($task["name"]).'" required>';
+                        echo '<button type="submit" name="edit_task_save">Zapisz</button>';
                         echo '</form>';
+                        echo '<span class="task-date">na: '.htmlspecialchars($task["date"]).'</span>';
                     } else {
-                        echo '<span style="color:#43b581;margin-left:10px;">Wykonane</span>';
+                        echo '<form action="home.php" method="post" style="display:inline;">';
+                        echo '<input type="hidden" name="edit_task_show" value="'.$id.'">';
+                        echo '<button type="submit" style="margin-right:8px;">Edytuj</button>';
+                        echo '</form>';
+                        echo '<span class="'.($task["done"] ? 'task-done' : '').'">'.htmlspecialchars($task["name"]).'</span>';
+                        echo '<span class="task-date">na: '.htmlspecialchars($task["date"]).'</span>';
                     }
-                    echo '<form action="home.php" method="post" style="display:inline;">';
-                    echo '<button type="submit" name="delete_task" value="'.$id.'" class="delete-btn">Usuń</button>';
-                    echo '</form>';
+                    
+                    echo '</div>'; // zamyka task-row
+
+
+                    echo '<div class="task-actions">';
+                    if (!(isset($_POST["edit_task_show"]) && $_POST["edit_task_show"] == $id)) {
+                        if (!$task["done"]) {
+                            echo '<form action="home.php" method="post" style="display:inline;">';
+                            echo '<button type="submit" name="done_task" value="'.$id.'">Oznacz jako wykonane</button>';
+                            echo '</form>';
+                        } else {
+                            echo '<span style="color:#43b581;margin-left:10px;">Wykonane</span>';
+                        }
+                        echo '<form action="home.php" method="post" style="display:inline;">';
+                        echo '<button type="submit" name="delete_task" value="'.$id.'" class="delete-btn">Usuń</button>';
+                        echo '</form>';
+                    }
                     echo '</div>';
 
-                    // Wyświetlanie podzadań
+
+
                     if (isset($task["subtasks"]) && count($task["subtasks"]) > 0) {
                         echo '<ul class="subtasks-list">';
                         foreach ($task["subtasks"] as $sub_id => $subtask) {
@@ -152,7 +182,6 @@
                         }
                         echo '</ul>';
                     }
-                    // Formularz dodawania podzadania
                     echo '<form class="subtask-form" action="home.php" method="post">';
                     echo '<input type="hidden" name="parent_id" value="'.$id.'">';
                     echo '<input type="text" name="subtask_name" placeholder="Dodaj podzadanie" required>';
